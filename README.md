@@ -1,4 +1,4 @@
-# staRoxy `0.1.0` <img src="staRoxy/vignettes/staRoxy_logo.svg" align="right" width="180">
+# staRoxy `0.1.0` <img src="vignettes/staRoxy_logo.svg" align="right" width="180">
 
 **staRoxy** is a dedicated R package designed to streamline oxylipidomics abundance data analysis. It provides a reproducible framework for data cleaning, normalization, statistical modeling, and integrated visualization. While originally developed for oxylipin profiling (in press), it is adaptable for other omics datasets, including transcriptomics, proteomics, and metabolomics. 
 

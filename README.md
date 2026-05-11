@@ -1,6 +1,6 @@
-# staRoxy `0.1.0` <img src="vignettes/staRoxy_logo.svg" align="right" width="180">
+# staRoxy `0.2.0` <img src="docs/staRoxy_logo.svg" align="right" width="180">
 
-**staRoxy** is a dedicated R package designed to streamline oxylipidomics abundance data analysis. It provides a reproducible framework for data cleaning, normalization, statistical modeling, and integrated visualization. While originally developed for oxylipin profiling (in press), it is adaptable for other omics datasets, including transcriptomics, proteomics, and metabolomics. 
+**staRoxy** is a dedicated R package designed to streamline oxylipidomics abundance data analysis. It provides a reproducible framework for data preprocessing, statistical modeling, and visualization. Although originally developed for oxylipin profiling, staRoxy may also be applicable to other mass spectrometry–based datasets, including proteomics and metabolomics.
 
 ---
 
@@ -10,9 +10,9 @@
 
 ```r
 if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
+    install.packages("BiocManager")
 
-BiocManager::install("pefjordao/staRoxy", build_vignettes = TRUE)
+BiocManager::install("pefjordao/staRoxy")
 ```
 
 ## Documentation

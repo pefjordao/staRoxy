@@ -3,7 +3,7 @@
 \docType{data}
 \name{metadata_oxy_plasma}
 \alias{metadata_oxy_plasma}
-\title{Metadata for Blood Plasma Samples (ALS Model)}
+\title{Metadata for Blood Plasma Samples}
 \format{
 A data frame with 24 rows and 2 columns:
 \describe{

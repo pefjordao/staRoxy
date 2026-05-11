@@ -23,18 +23,36 @@
 #' @return Invisibly returns \code{NULL}. Prints statistics to the console
 #' and generates a plot if \code{plot = TRUE}.
 #'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#' # Basic correlation between two paired experimental groups
+#' cor_between_oxy(
+#'   obj = staRoxy_object,
+#'   oxylipin = "PGE2",
+#'   group1 = "LPS",
+#'   group2 = "Control"
+#' )
+#'
+#' # Force a specific correlation method and disable the plot
+#' cor_between_oxy(
+#'   obj = staRoxy_object,
+#'   oxylipin = "PGE2",
+#'   group1 = "LPS",
+#'   group2 = "Control",
+#'   method = "spearman",
+#'   plot = FALSE
+#' )
+#'
 #' @importFrom stats cor.test
 #' @importFrom ggplot2 ggplot aes geom_smooth geom_point labs theme element_text
 #' @importFrom cowplot theme_half_open
 #' @importFrom stringr str_to_title
 #' @importFrom cli cli_h1 cli_alert_info cli_alert_success cli_alert_danger cli_rule
-#'
-#' @examples
-#' # Compare PGE2 levels between Scraper and Trypsin groups
-#' cor_between_oxy(data_oxy_pellet,
-#'                 oxylipin = "PGE2",
-#'                 group1 = "Scraper",
-#'                 group2 = "Trypsin")
 #'
 #' @export
 cor_between_oxy <- function(obj,
@@ -47,7 +65,7 @@ cor_between_oxy <- function(obj,
                             x_axis_size = 12,
                             y_axis_size = 12) {
 
-  # 1. Data Selection and Paired Validation
+  # Data Selection and Paired Validation
   vals1 <- as.numeric(obj$data[oxylipin, obj$meta$group == group1])
   vals2 <- as.numeric(obj$data[oxylipin, obj$meta$group == group2])
 
@@ -60,7 +78,7 @@ cor_between_oxy <- function(obj,
   vals1 <- vals1[valid]
   vals2 <- vals2[valid]
 
-  # 2. Statistical Correlation
+  # Statistical Correlation
   # Run advisor to get flags and method
   method_res <- check_cor_method(vals1, vals2, silent = TRUE)
   is_normal  <- attr(method_res, "is_normal")
@@ -82,7 +100,7 @@ cor_between_oxy <- function(obj,
   p <- as.numeric(cor_res$p.value)
   interpretation <- get_cor_label(r, p)
 
-  # 3. Console Reporting
+  # Console Reporting
   cli::cli_h1("Inter-group Correlation Analysis")
   cli::cli_alert_info("Lipid: '{oxylipin}' | Comparison: '{group1}' vs. '{group2}'")
   cli::cli_alert_info("Method: {toupper(method)} (Normal={is_normal}, Outliers={has_out})")
@@ -96,7 +114,7 @@ cor_between_oxy <- function(obj,
 
   if (!plot) return(invisible(NULL))
 
-  # 4. Visualization
+  # Visualization
   plot_df <- data.frame(G1 = vals1, G2 = vals2)
 
   ggplot2::ggplot(plot_df, ggplot2::aes(x = G1, y = G2)) +

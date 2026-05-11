@@ -21,18 +21,35 @@
 #' @return Invisibly returns \code{NULL}. Prints statistics to the console
 #' and generates a plot if \code{plot = TRUE}.
 #'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#' # Evaluate oxylipin correlation within a specific experimental group
+#' cor_within_oxy(
+#'   obj = staRoxy_object,
+#'   oxylipin1 = "11-HETE",
+#'   oxylipin2 = "PGE2",
+#'   group = "LPS"
+#' )
+#'
+#' # Force a specific correlation method
+#' cor_within_oxy(
+#'   obj = staRoxy_object,
+#'   oxylipin1 = "11-HETE",
+#'   oxylipin2 = "PGE2",
+#'   group = "LPS",
+#'   method = "spearman",
+#' )
+#'
 #' @importFrom stats cor.test
 #' @importFrom ggplot2 ggplot aes geom_smooth geom_point labs theme element_text
 #' @importFrom cowplot theme_half_open
 #' @importFrom stringr str_to_title
 #' @importFrom cli cli_h1 cli_alert_info cli_alert_success cli_alert_danger cli_rule
-#'
-#' @examples
-#' # Correlate PGE2 and 9-HETE within the Scraper group
-#' cor_within_oxy(data_oxy_pellet,
-#'                oxylipin1 = "PGE2",
-#'                oxylipin2 = "9-HETE",
-#'                group = "Scraper")
 #'
 #' @export
 cor_within_oxy <- function(obj,
@@ -46,7 +63,7 @@ cor_within_oxy <- function(obj,
                            x_axis_size = 12,
                            y_axis_size = 12) {
 
-  # 1. Data Validation
+  # Data Validation
   if (!(oxylipin1 %in% rownames(obj$data)) || !(oxylipin2 %in% rownames(obj$data))) {
     return(cli::cli_alert_danger("Lipids not found in the dataset."))
   }
@@ -61,7 +78,7 @@ cor_within_oxy <- function(obj,
   x_vals  <- x_vals[valid]
   y_vals  <- y_vals[valid]
 
-  # 2. Statistical Correlation
+  # Statistical Correlation
   # Run advisor to get flags and method
   method_res <- check_cor_method(x_vals, y_vals, silent = TRUE)
   is_normal  <- attr(method_res, "is_normal")
@@ -83,7 +100,7 @@ cor_within_oxy <- function(obj,
   p <- as.numeric(cor_res$p.value)
   interpretation <- get_cor_label(r, p)
 
-  # 3. Console Reporting
+  # Console Reporting
   cli::cli_h1("Intra-group Correlation Analysis")
   cli::cli_alert_info("Comparison: '{oxylipin1}' vs. '{oxylipin2}' | Group: '{group}'")
   cli::cli_alert_info("Method: {toupper(method)} (Normal={is_normal}, Outliers={has_out})")
@@ -97,7 +114,7 @@ cor_within_oxy <- function(obj,
 
   if (!plot) return(invisible(NULL))
 
-  # 4. Visualization
+  # Visualization
   line_color <- if (!is.null(colors) && group %in% names(colors)) colors[group] else "grey30"
   plot_df    <- data.frame(L1 = x_vals, L2 = y_vals)
 

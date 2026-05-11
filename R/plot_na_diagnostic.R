@@ -26,29 +26,34 @@
 #'
 #' @param obj A \code{staRoxy} object.
 #' @param mode Character. Either \code{"cor"} (default) or \code{"dist"}.
-#' @param point_color Color for points in correlation mode.
-#' @param true_color Color for features with NAs in distribution mode.
-#' @param false_color Color for features without NAs in distribution mode.
-#' @param line_color Color for the GAM trend line in correlation mode.
-#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size Numeric.
-#' Font sizes for plot elements.
+#' @param point_color,true_color,false_color,line_color Character. Hex codes or names for plot colors.
+#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size Numeric. Font sizes for plot elements.
 #'
-#' @return A \code{ggplot2} object (mode \code{"cor"}) or a \code{cowplot}
-#' grid object (mode \code{"dist"}).
-#'
-#' @importFrom tidyr pivot_longer
-#' @importFrom dplyr group_by summarise n mutate ungroup filter
-#' @importFrom ggplot2 ggplot aes theme element_text geom_point geom_smooth labs geom_density scale_color_manual stat_ecdf
-#' @importFrom cowplot theme_half_open background_grid plot_grid
-#' @importFrom stats sd
-#' @importFrom cli cli_alert_info
+#' @return A \code{ggplot2} object (mode \code{"cor"}) or a \code{cowplot} grid object (mode \code{"dist"}).
 #'
 #' @examples
-#' # Diagnostic of abundance vs. missingness correlation
-#' plot_na_diagnostic(data_oxy_pellet, mode = "cor")
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
 #'
-#' # Comparison of abundance distributions
-#' plot_na_diagnostic(data_oxy_pellet, mode = "dist")
+#'\dontrun{
+#' # Diagnostic using correlation mode (default)
+#' # Ideal to see if lower abundance correlates with more missing values
+#' plot_na_diagnostic(staRoxy_object, mode = "cor")
+#'
+#' # Diagnostic using distribution mode
+#' # Ideal to compare density and cumulative distribution shifts
+#' plot_na_diagnostic(staRoxy_object, mode = "dist")
+#'}
+#'
+#' @importFrom tidyr pivot_longer
+#' @importFrom dplyr group_by summarise n mutate ungroup filter distinct
+#' @importFrom ggplot2 ggplot aes theme element_text geom_point geom_smooth labs geom_density scale_color_manual stat_ecdf
+#' @importFrom cowplot theme_half_open background_grid plot_grid
+#' @importFrom stats sd median
+#' @importFrom cli cli_alert_info
 #'
 #' @export
 plot_na_diagnostic <- function(obj,
@@ -63,7 +68,7 @@ plot_na_diagnostic <- function(obj,
                                legend_title_size = 12,
                                legend_size = 12) {
 
-  # 1. Data Preparation
+  # Data Preparation
   # Reshape data to long format for easier ggplot mapping
   df <- as.data.frame(t(obj$data))
   df$group <- obj$meta$group
@@ -88,7 +93,7 @@ plot_na_diagnostic <- function(obj,
     )
   }
 
-  # 2. Mode: Correlation (Abundance vs. Missingness)
+  # Mode: Correlation (Abundance vs. Missingness)
   if (mode == "cor") {
     na_stats <- df_long %>%
       dplyr::group_by(oxylipin) %>%
@@ -127,20 +132,53 @@ plot_na_diagnostic <- function(obj,
 
   }
 
-  # 3. Mode: Distribution Comparison
+  # Mode: Distribution Comparison
   else if (mode == "dist") {
+
     dist_data <- df_long %>%
       dplyr::group_by(oxylipin) %>%
-      dplyr::mutate(has_na = any(is.na(intensity))) %>%
-      dplyr::ungroup() %>%
-      dplyr::filter(!is.na(intensity))
+      dplyr::mutate(
+        na_count = sum(is.na(intensity)),
+        has_na = na_count > 0
+      ) %>%
+      dplyr::ungroup()
+
+    if (length(unique(dist_data$has_na)) == 1 && dist_data$has_na[1] == TRUE) {
+
+      ox_na_summary <- dist_data %>% dplyr::distinct(oxylipin, na_count)
+      median_na <- stats::median(ox_na_summary$na_count)
+
+      cli::cli_alert_info("No oxylipins with 100% detection. Splitting distribution by median missingness (> {median_na} NAs).")
+
+      dist_data <- dist_data %>%
+        dplyr::mutate(
+          plot_group = ifelse(na_count > median_na, "High Missingness", "Low/Avg Missingness")
+        )
+      legend_title <- "Missingness Level"
+
+    } else {
+      dist_data <- dist_data %>%
+        dplyr::mutate(
+          plot_group = ifelse(has_na, "Has NAs", "100% Detected")
+        )
+      legend_title <- "Missing Values"
+    }
+
+    dist_data <- dist_data %>% dplyr::filter(!is.na(intensity))
+
+    color_mapping <- c(
+      "High Missingness" = true_color,
+      "Low/Avg Missingness" = false_color,
+      "Has NAs" = true_color,
+      "100% Detected" = false_color
+    )
 
     # Density Plot
-    p1 <- ggplot2::ggplot(dist_data, ggplot2::aes(x = intensity, color = has_na)) +
+    p1 <- ggplot2::ggplot(dist_data, ggplot2::aes(x = intensity, color = plot_group)) +
       ggplot2::geom_density(linewidth = 1) +
       ggplot2::scale_color_manual(
-        values = c("TRUE" = true_color, "FALSE" = false_color),
-        name = "Missing Values (NA)"
+        values = color_mapping,
+        name = legend_title
       ) +
       ggplot2::labs(
         title = "Missing Data Diagnostic - Distribution",
@@ -151,11 +189,11 @@ plot_na_diagnostic <- function(obj,
       cowplot::background_grid()
 
     # ECDF Plot (Cumulative Distribution)
-    p2 <- ggplot2::ggplot(dist_data, ggplot2::aes(x = intensity, color = has_na)) +
+    p2 <- ggplot2::ggplot(dist_data, ggplot2::aes(x = intensity, color = plot_group)) +
       ggplot2::stat_ecdf(linewidth = 1) +
       ggplot2::scale_color_manual(
-        values = c("TRUE" = true_color, "FALSE" = false_color),
-        name = "Missing Values (NA)"
+        values = color_mapping,
+        name = legend_title
       ) +
       ggplot2::labs(
         x = "Log2 Abundance",

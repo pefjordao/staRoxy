@@ -9,7 +9,7 @@ get_cor_label(r, p)
 \arguments{
 \item{r}{Numeric. The correlation coefficient (\eqn{R \in [-1, 1]}).}
 
-\item{p}{Numeric. The p-value associated with the correlation test.}
+\item{p}{Numeric. The P-value associated with the correlation test.}
 }
 \value{
 A character string describing the correlation (e.g., "Strong

@@ -48,10 +48,27 @@ Like its counterpart, this function uses an automatic method selection
 (Pearson/Spearman) based on data distribution.
 }
 \examples{
-# Correlate PGE2 and 9-HETE within the Scraper group
-cor_within_oxy(data_oxy_pellet,
-               oxylipin1 = "PGE2",
-               oxylipin2 = "9-HETE",
-               group = "Scraper")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Evaluate oxylipin correlation within a specific experimental group
+cor_within_oxy(
+  obj = staRoxy_object,
+  oxylipin1 = "11-HETE",
+  oxylipin2 = "PGE2",
+  group = "LPS"
+)
+
+# Force a specific correlation method
+cor_within_oxy(
+  obj = staRoxy_object,
+  oxylipin1 = "11-HETE",
+  oxylipin2 = "PGE2",
+  group = "LPS",
+  method = "spearman",
+)
 
 }

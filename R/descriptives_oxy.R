@@ -26,76 +26,86 @@
 #' @return Invisibly returns a data frame with the computed statistics.
 #' Results are also printed to the console as a formatted table.
 #'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#' # Get full descriptive statistics for all lipids and groups
+#' desc_all <- descriptives_oxy(staRoxy_object)
+#'
+#' # Find the top 5 most abundant lipids, sorted by Coefficient of Variation (CV%)
+#' desc_top <- descriptives_oxy(staRoxy_object, n_top = 5, sort_by = "cv")
+#'
+#' # Analyze specific groups and sort by the number of missing values (NAs)
+#' desc_group <- descriptives_oxy(
+#'   staRoxy_object,
+#'   group = c("LPS", "Control"),
+#'   sort_by = "na"
+#' )
+#'
 #' @importFrom tibble rownames_to_column
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr left_join group_by summarise mutate across filter slice_max pull arrange desc all_of
 #' @importFrom cli cli_h1 cli_alert_info cli_rule
 #'
-#' @examples
-#' # Basic descriptive statistics sorted by mean abundance
-#' descriptives_oxy(data_oxy_pellet, sort_by = "mean")
-#'
-#' # Statistics for a specific group only
-#' descriptives_oxy(data_oxy_pellet, group = "Scraper")
-#'
-#' # Top 10 features with highest CV%
-#' descriptives_oxy(data_oxy_pellet, n_top = 10, sort_by = "cv")
-#'
 #' @export
 descriptives_oxy <- function(obj, group = NULL, n_top = NULL, sort_by = "feature") {
   suppressWarnings({
-    # 1. Data Wrangling & Calculation
+    # Data Wrangling & Calculation
     # Convert matrix to long format, join metadata, and compute summary stats
     stats <- as.data.frame(obj$data) %>%
       tibble::rownames_to_column("Feature") %>%
-      tidyr::pivot_longer(-Feature, names_to = "sample", values_to = "Value") %>%
-      left_join(obj$meta, by = "sample") %>%
-      group_by(Feature, group) %>%
-      summarise(
+      tidyr::pivot_longer(cols = -Feature, names_to = "sample", values_to = "Value") %>%
+      dplyr::left_join(obj$meta, by = "sample") %>%
+      dplyr::group_by(Feature, group) %>%
+      dplyr::summarise(
         n_valid  = sum(!is.na(Value)),
         n_na     = sum(is.na(Value)),
         mean     = mean(Value, na.rm = TRUE),
-        median   = median(Value, na.rm = TRUE),
-        sd       = sd(Value, na.rm = TRUE),
+        median   = stats::median(Value, na.rm = TRUE),
+        sd       = stats::sd(Value, na.rm = TRUE),
         sem      = sd / sqrt(n_valid),
         cv_perc  = (sd / mean) * 100,
         .groups  = "drop"
       ) %>%
-      mutate(across(where(is.numeric), ~ round(., 2)))
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ round(., 2)))
 
-    # 2. Filtering Logic
+    # Filtering Logic
     # Filter by specific groups if provided
     if (!is.null(group)) {
-      stats <- stats %>% filter(group %in% !!group)
+      stats <- stats %>% dplyr::filter(group %in% !!group)
     }
 
     # Filter for top N features based on maximum mean value
     if (!is.null(n_top)) {
       top_features <- stats %>%
-        group_by(Feature) %>%
-        summarise(m = max(mean, na.rm = TRUE), .groups = "drop") %>%
-        slice_max(m, n = n_top, with_ties = FALSE) %>%
-        pull(Feature)
+        dplyr::group_by(Feature) %>%
+        dplyr::summarise(m = max(mean, na.rm = TRUE), .groups = "drop") %>%
+        dplyr::slice_max(m, n = n_top, with_ties = FALSE) %>%
+        dplyr::pull(Feature)
 
-      stats <- stats %>% filter(Feature %in% top_features)
+      stats <- stats %>% dplyr::filter(Feature %in% top_features)
     }
 
-    # 3. Sorting Logic
+    # Sorting Logic
     # Reorder results based on the selected metric
     stats <- switch(sort_by,
-                    "cv"      = stats %>% arrange(desc(cv_perc)),
-                    "mean"    = stats %>% arrange(desc(mean)),
-                    "median"  = stats %>% arrange(desc(median)),
-                    "sd"      = stats %>% arrange(desc(sd)),
-                    "sem"     = stats %>% arrange(desc(sem)),
-                    "na"      = stats %>% arrange(desc(n_na)),
-                    "n"       = stats %>% arrange(desc(n_valid)),
-                    "feature" = stats %>% arrange(Feature),
-                    stats %>% arrange(Feature)
+                    "cv"      = stats %>% dplyr::arrange(dplyr::desc(cv_perc)),
+                    "mean"    = stats %>% dplyr::arrange(dplyr::desc(mean)),
+                    "median"  = stats %>% dplyr::arrange(dplyr::desc(median)),
+                    "sd"      = stats %>% dplyr::arrange(dplyr::desc(sd)),
+                    "sem"     = stats %>% dplyr::arrange(dplyr::desc(sem)),
+                    "na"      = stats %>% dplyr::arrange(dplyr::desc(n_na)),
+                    "n"       = stats %>% dplyr::arrange(dplyr::desc(n_valid)),
+                    "feature" = stats %>% dplyr::arrange(Feature),
+                    stats %>% dplyr::arrange(Feature)
     )
   })
 
-  # 4. Reporting & Console Output
+  # Reporting & Console Output
   cli::cli_h1("Descriptive Statistics")
 
   available_groups <- paste(unique(stats$group), collapse = ', ')

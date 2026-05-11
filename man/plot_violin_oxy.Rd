@@ -2,23 +2,27 @@
 % Please edit documentation in R/plot_violin_oxy.R
 \name{plot_violin_oxy}
 \alias{plot_violin_oxy}
-\title{Visualize Oxylipin Abundance with Violin and Boxplots}
+\title{Visualize Oxylipin Abundance Profiles}
 \usage{
 plot_violin_oxy(
   obj,
+  oxylipins,
   stats = NULL,
-  oxylipin,
+  target_group = NULL,
   show_sig = TRUE,
   colors = NULL,
-  sig_y_nudge = 0,
+  sig_y_nudge = 0.6,
   log_scale = TRUE,
   unit = "unit",
   title_size = 14,
   x_axis_size = 12,
   y_axis_size = 12,
+  legend_title_size = 12,
+  legend_size = 12,
   show_violin = TRUE,
   violin_width = 0.8,
-  boxplot_width = 0.15,
+  boxplot_width = 0.2,
+  point_size = 1.5,
   sig_bar_size = 0.6,
   sig_text_size = 6
 )
@@ -26,61 +30,85 @@ plot_violin_oxy(
 \arguments{
 \item{obj}{A \code{staRoxy} object.}
 
+\item{oxylipins}{Character vector. Name(s) of the oxylipin(s) to plot.}
+
 \item{stats}{List. The results list returned by \code{limma_oxy}.
-If provided, significant comparisons are automatically annotated.}
+Only applied when plotting a single oxylipin.}
 
-\item{oxylipin}{Character. Name of the oxylipin feature to plot.}
+\item{target_group}{Character. Optional filter for a specific experimental group
+(useful when plotting multiple oxylipins).}
 
-\item{show_sig}{Logical. Whether to display significance bars. Default is \code{TRUE}.}
+\item{show_sig}{Logical. Whether to display significance bars (single lipid only).}
 
 \item{colors}{A named character vector for group colors.}
 
 \item{sig_y_nudge}{Numeric. Vertical adjustment for the significance bars.}
 
-\item{log_scale}{Logical. If \code{TRUE} (default), uses the log2 scale.
-If \code{FALSE}, transforms data to the linear scale.}
+\item{log_scale}{Logical. If \code{TRUE} (default), uses the log2 scale.}
 
-\item{unit}{Character. Measurement unit for the Y-axis label when \code{log_scale = FALSE}.}
+\item{unit}{Character. Y-axis unit label when \code{log_scale = FALSE}.}
 
-\item{title_size, x_axis_size, y_axis_size}{Numeric. Font sizes for plot elements.}
+\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric. Font sizes.}
 
 \item{show_violin}{Logical. Whether to include the violin layer. Default is \code{TRUE}.}
 
-\item{violin_width, boxplot_width}{Numeric. Aesthetic widths for the plot layers.}
-
-\item{sig_bar_size, sig_text_size}{Numeric. Sizes for the significance bars and asterisks.}
+\item{violin_width, boxplot_width, point_size, sig_bar_size, sig_text_size}{Numeric. Sizes for plot layers.}
 }
 \value{
 A \code{ggplot2} object.
 }
 \description{
-Generates a multi-layered visualization for a specific oxylipin, combining
-violin plots (distribution), boxplots (summary statistics), and jittered points
-(individual samples). It automatically handles scale transformations and
-significance annotations from differential analysis results.
+Generates a multi-layered visualization combining violin plots, boxplots,
+and jittered points. It dynamically adapts its layout: plotting experimental
+groups on the X-axis for a single oxylipin, or plotting multiple oxylipins
+on the X-axis dodged by group for broader profiling.
 }
 \details{
 \strong{Scale Transformation:}
 By default, data is plotted on the log2 scale. If \code{log_scale = FALSE},
-values are back-transformed using \eqn{2^x - 1} for linear visualization
-(e.g., in concentrations).
+values are back-transformed using \eqn{2^x - 1} for linear visualization.
 
-\strong{Significance Bars:}
-If the \code{stats} object (from \code{limma_oxy}) is provided, the function
-parses the comparison names (e.g., "GroupA vs. GroupB") and adds
-significance bars (\eqn{*}, \eqn{**}, \eqn{***}) for comparisons where the
-adjusted P-value < 0.05.
+\strong{Dynamic Layout & Significance Bars:}
+\itemize{
+\item \strong{Single Oxylipin:} If \code{stats} from \code{limma_oxy} are
+provided, significance bars (\eqn{*}, \eqn{**}, \eqn{***}) are automatically
+added for comparisons where the adjusted P-value < 0.05.
+\item \strong{Multiple Oxylipins:} The X-axis switches to display oxylipin
+names, and groups are dodged side-by-side. Significance bars are disabled
+in this mode to prevent visual clutter.
+}
 }
 \examples{
-# Plot 9,10-DiHOME abundance with significance bars
-plot_violin_oxy(data_oxy_pellet,
-                stats = results_limma,
-                oxylipin = "9,10-DiHOME")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+diff_res <- limma_oxy(staRoxy_object, save_results = FALSE)
+}
 
-# Plot in linear scale with custom units
-plot_violin_oxy(data_oxy_pellet,
-                oxylipin = "PGE2",
-                log_scale = FALSE,
-                unit = "nmol/mg")
+\dontrun{
+# Single Oxylipin with Significance Bars (Log2 Scale)
+plot_violin_oxy(
+  obj = staRoxy_object,
+  stats = diff_res,
+  oxylipins = "PGE2"
+)
+
+# Multiple Oxylipins Profiling (Significance bars auto-disabled)
+target_lipids <- c("PGE2", "PGD2", "11-HETE", "15-HETrE")
+plot_violin_oxy(
+  obj = staRoxy_object,
+  oxylipins = target_lipids
+)
+
+# Multiple Oxylipins isolated to a single target group (Linear Scale)
+plot_violin_oxy(
+  obj = staRoxy_object,
+  oxylipins = target_lipids,
+  target_group = "LPS",
+  log_scale = FALSE,
+  unit = "fg/mL"
+)
+}
 
 }

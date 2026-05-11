@@ -25,7 +25,13 @@ numerical value in the target group and be 100\% missing (all NAs) in every
 other group in the dataset.
 }
 \examples{
-# Identify oxylipins unique to Scraper or Trypsin groups
-get_exclusives_oxy(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Run the exclusivity analysis
+exclusives <- get_exclusives_oxy(staRoxy_object)
 
 }

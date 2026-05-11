@@ -39,10 +39,17 @@ missing values} across all samples.
 }
 }
 \examples{
-# Keep lipids present in at least 50\% of samples in at least one group
-data_filtered <- filter_oxy(data_oxy_pellet, type = "I", prop = 0.5)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+}
 
-# Strict filtering: keep only lipids with 100\% valid values
-data_strict <- filter_oxy(data_oxy_pellet, type = "III")
+# Default Type I filtering: keeps if >= 50\% valid in at least one group
+obj_filtered_1 <- filter_oxy(staRoxy_object, type = "I", prop = 0.5)
+
+# Type II filtering: keeps if >= 80\% valid across all samples combined
+obj_filtered_2 <- filter_oxy(staRoxy_object, type = "II", prop = 0.8)
+
+# Type III strict filtering: no missing values allowed at all
+obj_filtered_strict <- filter_oxy(staRoxy_object, type = "III")
 
 }

@@ -17,7 +17,7 @@
 #' of the \eqn{R} value.
 #'
 #' @param r Numeric. The correlation coefficient (\eqn{R \in [-1, 1]}).
-#' @param p Numeric. The p-value associated with the correlation test.
+#' @param p Numeric. The P-value associated with the correlation test.
 #'
 #' @return A character string describing the correlation (e.g., "Strong
 #' positive correlation").

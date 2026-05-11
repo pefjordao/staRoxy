@@ -18,11 +18,11 @@
 #'
 #' @keywords internal
 check_cor_method <- function(x, y, silent = TRUE) {
-  # 1. Normality check (Shapiro-Wilk)
+  # Normality check (Shapiro-Wilk)
   sh_p      <- c(stats::shapiro.test(x)$p.value, stats::shapiro.test(y)$p.value)
   is_normal <- all(sh_p > 0.05)
 
-  # 2. Outlier detection (IQR method)
+  # Outlier detection (IQR method)
   is_outlier <- function(v) {
     q           <- stats::quantile(v, probs = c(0.25, 0.75), na.rm = TRUE)
     lower_bound <- q[1] - 1.5 * diff(q)
@@ -31,7 +31,7 @@ check_cor_method <- function(x, y, silent = TRUE) {
   }
   has_out <- is_outlier(x) | is_outlier(y)
 
-  # 3. Decision logic
+  # Decision logic
   rec <- if (is_normal && !has_out) "pearson" else "spearman"
 
   # Store diagnostics as attributes

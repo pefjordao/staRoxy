@@ -7,8 +7,7 @@
 check_data_distribution(obj)
 }
 \arguments{
-\item{obj}{A \code{staRoxy} object containing \code{data} (abundance matrix)
-and \code{meta} (metadata).}
+\item{obj}{A \code{staRoxy} object.}
 }
 \value{
 Invisibly returns a list containing:
@@ -33,7 +32,13 @@ heteroscedasticity risks.
 }
 }
 \examples{
-# Assess the distribution and design of the pellet example dataset
-check_data_distribution(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Run the distribution and experimental design diagnostic
+check_data_distribution(staRoxy_object)
 
 }

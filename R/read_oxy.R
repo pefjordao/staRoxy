@@ -10,7 +10,8 @@
 #' \strong{Data Import and Cleaning:}
 #' \itemize{
 #'   \item \strong{File Formats:} Supports \code{.xlsx}, \code{.xls}, \code{.csv},
-#'   and \code{.txt} (via \code{readxl} and \code{data.table}).
+#'   and \code{.txt} (via \code{readxl} and \code{data.table}). It also directly accepts
+#'   \code{data.frame} or \code{matrix} objects already loaded in R environment.
 #'   \item \strong{Label Standardization:} Automatically applies \code{clean_labels()}
 #'   to fix encoding artifacts and biochemical symbols in oxylipin names.
 #'   \item \strong{Matrix Sanitization:} Automatically handles common data entry
@@ -23,11 +24,11 @@
 #' matrix and the metadata. Any samples present in only one of the files are
 #' automatically removed, and a summary report is printed to the console.
 #'
-#' @param data_path Character. Path to the oxylipin abundance file. The first
-#' column must contain oxylipin identifiers.
-#' @param meta_path Character. Path to the metadata file. It must contain
-#' at least a \code{sample} column (matching the data headers) and a
-#' \code{group} column.
+#' @param data_path Character path to the oxylipin abundance file OR a loaded data.frame/matrix. The first column or rownames must contain oxylipin identifiers.
+#' @param meta_path Character path to the metadata file OR a loaded data.frame. It must contain at least a \code{sample} column (matching the data headers) and a \code{group} column.
+#' @param auto_clean Logical. If \code{TRUE} (default), applies internal nomenclature
+#' cleaning to fix encoding artifacts common in oxylipidomics. Set to \code{FALSE}
+#' if using staRoxy for other omics data (e.g., proteomics) to preserve original names.
 #'
 #' @return An object of class \code{staRoxy}, which is a list containing:
 #' \itemize{
@@ -36,45 +37,68 @@
 #'   \item \strong{info:} A list of summary statistics and creation date.
 #' }
 #'
+#' @examples
+#' \dontshow{
+#' df_abundance <- data_oxy_lps_pellet
+#' df_metadata <- metadata_oxy_lps_pellet
+#' }
+#'
+#' # Loading from objects already in the R environment
+#' staRoxy_object <- read_oxy(data_path = df_abundance, meta_path = df_metadata)
+#'
+#' # Loading directly from files (example syntax)
+#' # staRoxy_object <- read_oxy(
+#' #   data_path = "path/to/abundance_data.xlsx",
+#' #   meta_path = "path/to/metadata.csv"
+#' # )
+#'
 #' @importFrom tools file_ext
 #' @importFrom readxl read_excel
 #' @importFrom data.table fread
-#' @importFrom cli cli_h1 cli_alert_success cli_alert_warning cli_alert_info cli_h2 cli_li cli_rule
-#'
-#' @examples
-#' # Example using paths to internal or external files
-#' # staRoxy_object <- read_oxy(data_path = "data_oxylipins.csv",
-#' #                           meta_path = "metadata.csv")
+#' @importFrom cli cli_h1 cli_alert_success cli_alert_warning cli_alert_info cli_h2 cli_li cli_rule cli_text
 #'
 #' @export
-read_oxy <- function(data_path, meta_path) {
+read_oxy <- function(data_path, meta_path, auto_clean = TRUE) {
 
   # Internal Helper Functions
-  # Define a helper to load different file formats (Excel vs. Text/CSV)
-  load_any <- function(path) {
-    if (is.data.frame(path)) return(as.data.frame(path))
-
-    if (is.character(path)) {
-      ext <- tolower(tools::file_ext(path))
-      if (ext %in% c("xls", "xlsx")) {
-        return(as.data.frame(readxl::read_excel(path)))
+  load_any <- function(input) {
+    if (is.data.frame(input) || is.matrix(input)) {
+      df <- as.data.frame(input)
+      if (!identical(rownames(df), as.character(seq_len(nrow(df))))) {
+        df <- cbind(ID = rownames(df), df)
+        rownames(df) <- NULL
       }
-      return(data.table::fread(path, data.table = FALSE, check.names = FALSE, encoding = "UTF-8"))
+      return(df)
     }
 
-    stop("Input must be a data.frame or a file path (csv, xlsx).")
+    if (is.character(input)) {
+      ext <- tolower(tools::file_ext(input))
+      if (ext %in% c("xls", "xlsx")) {
+        return(as.data.frame(readxl::read_excel(input)))
+      }
+      return(data.table::fread(input, data.table = FALSE, check.names = FALSE, encoding = "UTF-8"))
+    }
+
+    stop("Input must be a data.frame, matrix, or a file path (csv, xlsx).")
   }
 
   # Data Loading and ID Standardization
   raw <- load_any(data_path)
   raw_ids <- as.character(raw[[1]])
-  ids <- clean_labels(raw_ids)
+  raw_ids <- stringi::stri_unescape_unicode(raw_ids)
 
-  # Handle cases where standardization fails
-  if (any(is.na(ids))) {
-    na_count <- sum(is.na(ids))
-    cli::cli_alert_info("Note: {na_count} names could not be standardized. Keeping original labels.")
-    ids[is.na(ids)] <- raw_ids[is.na(ids)]
+  if (auto_clean) {
+    ids <- clean_labels(raw_ids)
+
+    # Handle cases where standardization fails
+    if (any(is.na(ids))) {
+      na_count <- sum(is.na(ids))
+      cli::cli_alert_info("Note: {na_count} names could not be standardized. Keeping original labels.")
+      ids[is.na(ids)] <- raw_ids[is.na(ids)]
+    }
+  } else {
+    # Omics bypass: keeps exact names from the file
+    ids <- raw_ids
   }
 
   # Ensure all feature labels are unique
@@ -84,7 +108,6 @@ read_oxy <- function(data_path, meta_path) {
   }
 
   # Data Matrix Cleaning
-  # Convert character strings to numeric, handle separators, and treat zeros as NAs
   clean_mat <- apply(raw[, -1, drop = FALSE], 2, function(x) {
     if (is.character(x)) {
       x <- gsub("[ \t\r\n]", "", gsub(",", ".", x))
@@ -119,10 +142,23 @@ read_oxy <- function(data_path, meta_path) {
   }
 
   # Final Data Harmonization
-  # Reorder and filter both datasets to match common samples
   meta <- meta[match(common, meta$sample), ]
   meta$group <- factor(meta$group)
   data <- clean_mat[, meta$sample, drop = FALSE]
+
+  # Global Quality Control - 100% NA samples removing
+  empty_samples <- colSums(!is.na(data)) == 0
+
+  if (any(empty_samples)) {
+    n_empty <- sum(empty_samples)
+    names_empty <- colnames(data)[empty_samples]
+
+    cli::cli_alert_danger("Removed {n_empty} sample{?s} with 100% missing values:")
+    cli::cli_text("{.field {names_empty}}")
+
+    data <- data[, !empty_samples, drop = FALSE]
+    meta <- meta[!empty_samples, , drop = FALSE]
+  }
 
   n_oxy <- nrow(data)
   n_samples <- ncol(data)
@@ -130,7 +166,7 @@ read_oxy <- function(data_path, meta_path) {
 
   # Console Output Summary
   cli::cli_h1("staRoxy Data Summary")
-  cli::cli_alert_success("Successful upload of {n_oxy} oxylipins across {n_samples} samples.")
+  cli::cli_alert_success("Successful upload of {n_oxy} features across {n_samples} samples.")
 
   cli::cli_h2("Experimental Groups:")
   for (g_name in names(group_counts)) {
@@ -139,12 +175,11 @@ read_oxy <- function(data_path, meta_path) {
   cli::cli_rule()
 
   # Object Construction
-  # Assemble the final staRoxy object
   obj <- list(
     data = data,
     meta = meta,
     info = list(
-      n_oxylipins = n_oxy,
+      n_features = n_oxy,
       n_samples = n_samples,
       groups = names(group_counts),
       date_created = Sys.time()

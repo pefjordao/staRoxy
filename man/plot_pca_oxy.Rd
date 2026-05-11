@@ -8,7 +8,7 @@ plot_pca_oxy(
   obj,
   na_method = "minprob",
   na_threshold = 0.5,
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   colors = NULL,
   title_size = 14,
   x_axis_size = 12,
@@ -25,14 +25,12 @@ or \code{"rf"} (Random Forest for MAR). Default is \code{"minprob"}.}
 
 \item{na_threshold}{Numeric. Proportion threshold (0-1) for retaining features.}
 
-\item{remove_exclusive}{Logical. If \code{TRUE} (default), excludes lipids
-detected in only one group to prevent artificial clustering.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 
 \item{colors}{A named character vector for group colors. If \code{NULL},
 a default palette is used.}
 
-\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric.
-Font sizes for various plot elements.}
+\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric. Font sizes for plot elements.}
 }
 \value{
 A \code{ggplot2} object.
@@ -55,11 +53,23 @@ Confidence ellipses are drawn using \code{ggplot2::stat_ellipse} to
 represent the distribution of each experimental group.
 }
 \examples{
-# PCA with default colors
-plot_pca_oxy(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# PCA with custom group colors
-my_colors <- c("Trypsin" = "#F65F72", "Scraper" = "#492376")
-plot_pca_oxy(data_oxy_pellet, colors = my_colors, title_size = 16)
+\dontrun{
+# Default PCA plot with automatic colors and minimum probability imputation
+plot_pca_oxy(staRoxy_object)
+
+# PCA plot using Random Forest imputation and custom aesthetic sizes
+plot_pca_oxy(
+  obj = staRoxy_object,
+  na_method = "rf",
+  title_size = 16,
+  legend_size = 10
+)
+}
 
 }

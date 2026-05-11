@@ -4,15 +4,17 @@
 \alias{classify_oxy}
 \title{Classify Oxylipins by Fatty Acid Precursors}
 \usage{
-classify_oxy(obj, return_mode = "summary")
+classify_oxy(obj, universe = get_oxy_universe(), return_mode = "summary")
 }
 \arguments{
-\item{obj}{A \code{staRoxy} object containing \code{data} (abundance matrix)
-and \code{meta} (metadata).}
+\item{obj}{A \code{staRoxy} object.}
+
+\item{universe}{A data frame mapping oxylipins to precursors. Defaults to
+the output of \code{get_oxy_universe()}.}
 
 \item{return_mode}{Character. Use \code{"summary"} (default) for counts of unique
 species per precursor/group, or \code{"species"} for a binary presence (1)
-vs. absence (0) matrix for each lipid.}
+vs. absence (0) matrix for each Oxylipin.}
 }
 \value{
 A data frame containing either the classification summary or the
@@ -20,24 +22,31 @@ species-level binary matrix.
 }
 \description{
 Maps detected oxylipins to their biological fatty acid precursors (e.g., ARA,
-EPA, DHA, LA) using an internal biochemical dictionary. It provides either
-a detailed presence/absence matrix per group or a summarized count of
-unique species per precursor.
+EPA, DHA, LA). It provides either a detailed presence/absence matrix per
+group or a summarized count of unique species per precursor.
 }
 \details{
-The classification relies on a built-in mapping table of common oxylipins.
-A lipid is considered "Present" in a group if it has at least one finite
-(non-NA, non-Inf) value across the samples of that group.
-
-\strong{Note on Nomenclature:}
-Lipid identifiers must match the package database (see vignette). Use \code{show_database_oxy()} to view the supported names and
-their respective precursors.
+The classification relies on a reference universe mapping table. By default,
+it uses the internal \code{staRoxy} database. A oxylipin is considered "Present"
+in a group if it has at least one finite (non-NA, non-Inf) value across the
+samples of that group.
 }
 \examples{
-# Get a summary of unique species per precursor
-classify_oxy(data_oxy_pellet, return_mode = "summary")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# Get the binary presence/absence matrix
-classify_oxy(data_oxy_pellet, return_mode = "species")
+# Standard summary using the default universe
+classification_summary <- classify_oxy(staRoxy_object, return_mode = "summary")
+
+# Classification using a custom edited universe
+my_custom_univ <- edit_oxy_universe(remove = c("PGE2", "PGD2"))
+custom_classification <- classify_oxy(
+  obj = staRoxy_object,
+  universe = my_custom_univ,
+  return_mode = "species"
+)
 
 }

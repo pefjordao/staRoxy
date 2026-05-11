@@ -4,15 +4,16 @@
 \alias{read_oxy}
 \title{Import and Harmonize Oxylipidomics Data}
 \usage{
-read_oxy(data_path, meta_path)
+read_oxy(data_path, meta_path, auto_clean = TRUE)
 }
 \arguments{
-\item{data_path}{Character. Path to the oxylipin abundance file. The first
-column must contain oxylipin identifiers.}
+\item{data_path}{Character path to the oxylipin abundance file OR a loaded data.frame/matrix. The first column or rownames must contain oxylipin identifiers.}
 
-\item{meta_path}{Character. Path to the metadata file. It must contain
-at least a \code{sample} column (matching the data headers) and a
-\code{group} column.}
+\item{meta_path}{Character path to the metadata file OR a loaded data.frame. It must contain at least a \code{sample} column (matching the data headers) and a \code{group} column.}
+
+\item{auto_clean}{Logical. If \code{TRUE} (default), applies internal nomenclature
+cleaning to fix encoding artifacts common in oxylipidomics. Set to \code{FALSE}
+if using staRoxy for other omics data (e.g., proteomics) to preserve original names.}
 }
 \value{
 An object of class \code{staRoxy}, which is a list containing:
@@ -32,7 +33,8 @@ experimental annotations.
 \strong{Data Import and Cleaning:}
 \itemize{
 \item \strong{File Formats:} Supports \code{.xlsx}, \code{.xls}, \code{.csv},
-and \code{.txt} (via \code{readxl} and \code{data.table}).
+and \code{.txt} (via \code{readxl} and \code{data.table}). It also directly accepts
+\code{data.frame} or \code{matrix} objects already loaded in R environment.
 \item \strong{Label Standardization:} Automatically applies \code{clean_labels()}
 to fix encoding artifacts and biochemical symbols in oxylipin names.
 \item \strong{Matrix Sanitization:} Automatically handles common data entry
@@ -46,8 +48,18 @@ matrix and the metadata. Any samples present in only one of the files are
 automatically removed, and a summary report is printed to the console.
 }
 \examples{
-# Example using paths to internal or external files
-# staRoxy_object <- read_oxy(data_path = "data_oxylipins.csv",
-#                           meta_path = "metadata.csv")
+\dontshow{
+df_abundance <- data_oxy_lps_pellet
+df_metadata <- metadata_oxy_lps_pellet
+}
+
+# Loading from objects already in the R environment
+staRoxy_object <- read_oxy(data_path = df_abundance, meta_path = df_metadata)
+
+# Loading directly from files (example syntax)
+# staRoxy_object <- read_oxy(
+#   data_path = "path/to/abundance_data.xlsx",
+#   meta_path = "path/to/metadata.csv"
+# )
 
 }

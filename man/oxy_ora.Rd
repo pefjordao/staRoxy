@@ -6,6 +6,7 @@
 \usage{
 oxy_ora(
   obj,
+  universe = get_oxy_universe(),
   compare_two_groups = FALSE,
   group1 = NULL,
   group2 = NULL,
@@ -22,6 +23,9 @@ oxy_ora(
 \arguments{
 \item{obj}{A \code{staRoxy} object.}
 
+\item{universe}{A data frame mapping oxylipins to precursors. Defaults to
+the output of \code{get_oxy_universe()}.}
+
 \item{compare_two_groups}{Logical. If \code{TRUE}, filters analysis for
 specific group comparisons. Default is \code{FALSE}.}
 
@@ -31,8 +35,7 @@ specific group comparisons. Default is \code{FALSE}.}
 
 \item{palette}{Character. ColorBrewer palette for the plot (default "Spectral").}
 
-\item{title_size, x_axis_size, y_axis_size, legend_size, legend_title_size, sig_size}{Numeric.
-Plot aesthetics and font sizes.}
+\item{title_size, x_axis_size, y_axis_size, legend_size, legend_title_size, sig_size}{Numeric. Plot aesthetics and font sizes.}
 }
 \value{
 Invisibly returns a data frame with ORA statistics, including
@@ -45,8 +48,7 @@ a theoretical reference universe.
 }
 \details{
 The function uses a hypergeometric test (one-vs-all) to compare the observed
-diversity of each precursor class against its frequency in a reference
-universe of 125 oxylipins.
+diversity of each precursor class against its frequency in a reference universe.
 
 \strong{Enrichment Score (ES):}
 Calculated as the ratio between the observed proportion in the group and
@@ -63,11 +65,19 @@ An \eqn{ES > 1} indicates over-representation (enrichment), while
 \eqn{ES < 1} indicates under-representation (depletion).
 }
 \examples{
-# Perform ORA on the default pellet dataset
-ora_results <- oxy_ora(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# Compare ORA specifically between two groups
-oxy_ora(data_oxy_pellet, compare_two_groups = TRUE,
-        group1 = "Scraper", group2 = "Trypsin")
+\dontrun{
+# Run ORA using the default universe
+oxy_ora(staRoxy_object)
+
+# Run ORA using a custom universe
+custom_univ <- edit_oxy_universe(remove = c("PGE2", "PGD2"))
+oxy_ora(staRoxy_object, universe = custom_univ)
+}
 
 }

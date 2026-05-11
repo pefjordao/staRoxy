@@ -11,7 +11,7 @@ loading_dissimilarity(
   pc_index = 1,
   na_method = "minprob",
   na_threshold = 0.5,
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   method = "auto",
   threshold = 0.3,
   r_stability = 0.6,
@@ -37,7 +37,7 @@ loading_dissimilarity(
 
 \item{na_threshold}{Numeric. Missingness threshold (default 0.5).}
 
-\item{remove_exclusive}{Logical. If \code{TRUE}, excludes lipids unique to one group.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 
 \item{method}{Character. Correlation method: \code{"auto"} (default), \code{"pearson"}, or \code{"spearman"}.}
 
@@ -83,4 +83,21 @@ equal to or lower than \eqn{r_{obs}} under the null hypothesis of stability
 \strong{Visualization:} Generates a quadrant plot where oxylipins in
 Quadrants II and IV represent features with the strongest divergence in
 contribution between groups.
+}
+\examples{
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+\dontrun{
+# Compare the loading pattern architecture of PC1 between two groups
+loading_dissimilarity(
+  obj = staRoxy_object,
+  group1 = "LPS",
+  group2 = "Control",
+  pc_index = 1
+)
+}
 }

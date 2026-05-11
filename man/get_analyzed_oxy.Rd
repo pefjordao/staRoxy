@@ -19,7 +19,13 @@ currently retained in the dataset. This reflects the state of the data
 after any filtering or subsetting steps.
 }
 \examples{
-# List all lipids currently in the pellet dataset
-get_analyzed_oxy(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Retrieve the names of the oxylipins currently in the object
+get_analyzed_oxy(staRoxy_object)
 
 }

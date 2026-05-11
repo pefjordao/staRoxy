@@ -17,43 +17,51 @@
 #'   heteroscedasticity risks.
 #' }
 #'
-#' @param obj A \code{staRoxy} object containing \code{data} (abundance matrix)
-#' and \code{meta} (metadata).
+#' @param obj A \code{staRoxy} object.
 #'
 #' @return Invisibly returns a list containing:
 #' \item{skewness}{The calculated Fisher-Pearson skewness coefficient (\eqn{\gamma_1}).}
 #' \item{sample_sizes}{A named numeric vector with counts per experimental group.}
 #'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#' # Run the distribution and experimental design diagnostic
+#' check_data_distribution(staRoxy_object)
+#'
 #' @importFrom cli cli_h1 cli_alert_info cli_alert_warning cli_alert_danger cli_alert_success cli_rule
 #' @importFrom stats sd
-#'
-#' @examples
-#' # Assess the distribution and design of the pellet example dataset
-#' check_data_distribution(data_oxy_pellet)
 #'
 #' @export
 check_data_distribution <- function(obj) {
   cli::cli_h1("Model Advisor Report")
 
   # 1. Skewness and Scale Analysis
-  # Isolate numeric values for distribution testing (excluding NAs and zeros)
-  vals <- as.vector(obj$data)
+  vals <- as.numeric(as.matrix(obj$data))
   vals <- vals[vals > 0 & !is.na(vals)]
 
   # Internal helper for skewness calculation (Fisher-Pearson)
   calc_skew <- function(x) {
     n <- length(x)
-    mu <- mean(x)
-    m3 <- sum((x - mu)^3) / n
-    s3 <- stats::sd(x)^3
+    if (n < 3) return(NA)
+    mu <- mean(x, na.rm = TRUE)
+    m3 <- sum((x - mu)^3, na.rm = TRUE) / n
+    s3 <- stats::sd(x, na.rm = TRUE)^3
     return(m3 / s3)
   }
 
+  # Usamos um nome de variável ASCII para evitar erros de parser
   gamma1 <- calc_skew(vals)
 
   cli::cli_alert_info("Testing distribution symmetry using Pearson's skewness coefficient (\u03b31).")
 
-  if (abs(gamma1) > 1.2) {
+  if (is.na(gamma1)) {
+    cli::cli_alert_warning("Skewness could not be calculated (insufficient data).")
+  } else if (abs(gamma1) > 1.2) {
     cli::cli_alert_warning("Scale Check: High skewness detected (\u03b31 = {round(gamma1, 2)}).")
     cli::cli_alert_danger("Advice: Data appears to be in RAW scale. Log2 transformation is highly recommended.")
   } else {

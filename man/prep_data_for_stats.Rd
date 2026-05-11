@@ -8,7 +8,7 @@ prep_data_for_stats(
   obj,
   na_threshold = 0.5,
   method = "minprob",
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   seed = 5742
 )
 }
@@ -21,8 +21,7 @@ prep_data_for_stats(
 \item{method}{Character. Imputation strategy: \code{"minprob"} (MNAR-focused)
 or \code{"rf"} (Random Forest for MAR-focused).}
 
-\item{remove_exclusive}{Logical. Whether to filter out lipids detected in
-only one group. Default is \code{TRUE}.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed. Default is \code{TRUE}.}
 
 \item{seed}{Numeric. Seed for reproducibility of stochastic imputation.}
 }
@@ -35,16 +34,16 @@ data. It distinguishes between technical missingness (MAR) and biological
 non-detection (MNAR) to ensure statistical stability.
 }
 \details{
-\strong{1. Filtering Phase:}
+\strong{Filtering Phase:}
 \itemize{
 \item \strong{Threshold:} Retains oxylipins with valid measurements in at
 least \eqn{(1 - na\_threshold)} proportion of samples in at least one group.
-\item \strong{Exclusivity:} If \code{remove_exclusive = TRUE}, oxylipins
+\item \strong{Exclusivity:} If \code{require_all_groups = TRUE}, oxylipins
 missing 100\% of values in any group are removed to avoid artificial
 variance stabilization issues in linear models.
 }
 
-\strong{2. Imputation Phase:}
+\strong{Imputation Phase:}
 \itemize{
 \item \strong{MinProb (MNAR):} For Missing Not At Random values. Imputes
 group-wise missingness using the group mean. If an entire group is missing,
@@ -53,6 +52,14 @@ it uses the global minimum value for that lipid, adding stochastic noise
 \item \strong{Random Forest (MAR):} For Missing At Random values. Leverages
 the global metabolic profile via the \code{missForest} package to
 estimate stochastic missingness.
+}
+
+\strong{Post-Imputation Safety:}
+\itemize{
+\item \strong{Zero Variance Filter:} Oxylipins that result in zero variance
+across all samples after imputation are automatically removed. This prevents
+mathematical singularities and fatal errors in downstream multivariate
+analyses (like PCA) and linear modeling.
 }
 }
 \keyword{internal}

@@ -17,7 +17,7 @@ to their respective biological fatty acid precursors.
 \details{
 The database consists of 125 oxylipins and includes the following columns:
 \itemize{
-\item \strong{Nº:} Internal numerical index.
+\item \strong{No.:} Internal numerical index.
 \item \strong{Cayman:} Standard product nomenclature from Cayman Chemical.
 \item \strong{Synonym:} Alternative biological or chemical names (e.g., LIPID MAPS).
 \item \strong{staRoxy:} The specific identifier used for calculations within the package.
@@ -25,8 +25,9 @@ The database consists of 125 oxylipins and includes the following columns:
 }
 }
 \examples{
-# Access the oxylipin dictionary
-oxy_db <- show_database_oxy()
-head(oxy_db)
+# Access the internal oxylipin dictionary
+
+show_database_oxy()
+
 
 }

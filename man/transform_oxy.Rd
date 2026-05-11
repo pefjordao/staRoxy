@@ -32,7 +32,12 @@ and could cause errors in multivariate analyses.
 }
 }
 \examples{
-# Apply log2 transformation to the filtered dataset
-staRoxy_object <- transform_oxy(staRoxy_object)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+}
+
+# Apply log2 transformation and remove non-informative features
+staRoxy_object_transformed <- transform_oxy(staRoxy_object)
 
 }

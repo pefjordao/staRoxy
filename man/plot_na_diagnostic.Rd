@@ -23,20 +23,12 @@ plot_na_diagnostic(
 
 \item{mode}{Character. Either \code{"cor"} (default) or \code{"dist"}.}
 
-\item{point_color}{Color for points in correlation mode.}
+\item{point_color, true_color, false_color, line_color}{Character. Hex codes or names for plot colors.}
 
-\item{true_color}{Color for features with NAs in distribution mode.}
-
-\item{false_color}{Color for features without NAs in distribution mode.}
-
-\item{line_color}{Color for the GAM trend line in correlation mode.}
-
-\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric.
-Font sizes for plot elements.}
+\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric. Font sizes for plot elements.}
 }
 \value{
-A \code{ggplot2} object (mode \code{"cor"}) or a \code{cowplot}
-grid object (mode \code{"dist"}).
+A \code{ggplot2} object (mode \code{"cor"}) or a \code{cowplot} grid object (mode \code{"dist"}).
 }
 \description{
 Visualizes missing value patterns to distinguish between Missing Not At Random
@@ -63,10 +55,20 @@ is a strong indicator of MNAR.
 }
 }
 \examples{
-# Diagnostic of abundance vs. missingness correlation
-plot_na_diagnostic(data_oxy_pellet, mode = "cor")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# Comparison of abundance distributions
-plot_na_diagnostic(data_oxy_pellet, mode = "dist")
+\dontrun{
+# Diagnostic using correlation mode (default)
+# Ideal to see if lower abundance correlates with more missing values
+plot_na_diagnostic(staRoxy_object, mode = "cor")
+
+# Diagnostic using distribution mode
+# Ideal to compare density and cumulative distribution shifts
+plot_na_diagnostic(staRoxy_object, mode = "dist")
+}
 
 }

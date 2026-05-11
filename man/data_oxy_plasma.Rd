@@ -3,9 +3,9 @@
 \docType{data}
 \name{data_oxy_plasma}
 \alias{data_oxy_plasma}
-\title{Oxylipidomics Abundance Data (Blood Plasma - ALS Mouse Model)}
+\title{Blood Plasma Oxylipin Data (ALS Mouse Model)}
 \format{
-A data frame with lipids as rows and 24 samples as columns.
+A data frame with oxylipins as rows and 24 samples as columns.
 }
 \source{
 Chaves-Filho, A. B., et al. (2023). Free Radical Biology and Medicine.

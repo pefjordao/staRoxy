@@ -48,10 +48,28 @@ specified. It requires that both groups have the same number of samples
 (paired design).
 }
 \examples{
-# Compare PGE2 levels between Scraper and Trypsin groups
-cor_between_oxy(data_oxy_pellet,
-                oxylipin = "PGE2",
-                group1 = "Scraper",
-                group2 = "Trypsin")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Basic correlation between two paired experimental groups
+cor_between_oxy(
+  obj = staRoxy_object,
+  oxylipin = "PGE2",
+  group1 = "LPS",
+  group2 = "Control"
+)
+
+# Force a specific correlation method and disable the plot
+cor_between_oxy(
+  obj = staRoxy_object,
+  oxylipin = "PGE2",
+  group1 = "LPS",
+  group2 = "Control",
+  method = "spearman",
+  plot = FALSE
+)
 
 }

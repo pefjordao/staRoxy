@@ -23,7 +23,7 @@
 #' @param obj A \code{staRoxy} object.
 #' @param na_method Imputation method for the clustering pipeline (default \code{"minprob"}).
 #' @param na_threshold Missingness threshold for feature retention (default \code{0.5}).
-#' @param remove_exclusive Logical. If \code{TRUE}, excludes lipids unique to one group.
+#' @param require_all_groups Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.
 #' @param colors A named character vector for group annotations.
 #' @param show_values Logical. If \code{TRUE}, prints Z-score values inside cells.
 #' @param hide_na Logical. If \code{TRUE}, filters out oxylipins with any missing values
@@ -31,10 +31,31 @@
 #' @param na_color Color for missing values (default \code{"grey90"}).
 #' @param z_cap Numeric. Maximum absolute Z-score to display (default \code{4}).
 #' @param palette Character. Viridis palette option (e.g., "magma", "viridis").
+#' @param show_sample_names Logical. If \code{FALSE}, hides the sample names on the x-axis for a cleaner look (default \code{TRUE}).
 #' @param x_axis_size,y_axis_size,legend_title_size,legend_size Numeric. Font sizes
 #' for plot labels and legends.
 #'
 #' @return Draws a \code{ComplexHeatmap} and invisibly returns the \code{HeatmapList} object.
+#'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#'\dontrun{
+#' # Default heatmap
+#' plot_heatmap_oxy(staRoxy_object)
+#'
+#' # Clean heatmap: hide NA values, hide sample names, and show Z-scores
+#' plot_heatmap_oxy(
+#'   staRoxy_object,
+#'   hide_na = TRUE,
+#'   show_sample_names = FALSE,
+#'   show_values = TRUE
+#' )
+#'}
 #'
 #' @importFrom stats sd hclust dist
 #' @importFrom circlize colorRamp2
@@ -44,54 +65,48 @@
 #' @importFrom scales hue_pal
 #' @importFrom cli cli_alert_danger
 #'
-#' @examples
-#' # Generate heatmap with default settings
-#' plot_heatmap_oxy(data_oxy_pellet)
-#'
-#' # Heatmap hiding NAs and capping Z-score at 2
-#' plot_heatmap_oxy(data_oxy_pellet, hide_na = TRUE, z_cap = 2)
-#'
 #' @export
 plot_heatmap_oxy <- function(obj,
                              na_method = "minprob",
                              na_threshold = 0.5,
-                             remove_exclusive = TRUE,
+                             require_all_groups = TRUE,
                              colors = NULL,
                              show_values = FALSE,
                              hide_na = FALSE,
                              na_color = "grey90",
                              z_cap = 4,
                              palette = "magma",
+                             show_sample_names = TRUE,
                              x_axis_size = 12,
                              y_axis_size = 12,
                              legend_title_size = 12,
                              legend_size = 12) {
 
-  # 1. Data Preparation and Filtering
+  # Data Preparation and Filtering
   # Impute missing values for statistical consistency (clustering/z-score)
   m_imp <- prep_data_for_stats(
     obj,
     na_threshold = na_threshold,
     method = na_method,
-    remove_exclusive = remove_exclusive
+    require_all_groups = require_all_groups
   )
 
   # Remove features with near-zero variance
-  valid_rows <- apply(m_imp, 1, function(x) sd(x, na.rm = TRUE) > 1e-4)
+  valid_rows <- apply(m_imp, 1, function(x) stats::sd(x, na.rm = TRUE) > 1e-4)
   m_imp <- m_imp[valid_rows, , drop = FALSE]
 
   # Match the raw data matrix for visual NA preservation
   m_raw <- as.matrix(obj$data)[rownames(m_imp), , drop = FALSE]
 
-  # 2. Z-score Calculation
+  # Z-score Calculation
   # Standardize rows (oxylipins) based on the imputed matrix
-  z <- t(apply(m_imp, 1, function(x) (x - mean(x)) / sd(x)))
+  z <- t(apply(m_imp, 1, function(x) (x - mean(x)) / stats::sd(x)))
 
   # Apply capping (winsorization) to prevent outliers from dominating the scale
   z[z > z_cap] <- z_cap
   z[z < -z_cap] <- -z_cap
 
-  # 3. Visual Logic: Re-introducing Missing Values
+  # Visual Logic: Re-introducing Missing Values
   # Map NAs from the original data back to the Z-score matrix for visualization
   z_vis <- z
   z_vis[is.na(m_raw)] <- NA
@@ -103,16 +118,17 @@ plot_heatmap_oxy <- function(obj,
     z <- z[keep_vis, , drop = FALSE]
 
     if (nrow(z_vis) == 0) {
-      return(cli::cli_alert_danger("No oxylipins left after visual NA filtering!"))
+      cli::cli_alert_danger("No oxylipins left after visual NA filtering!")
+      return(invisible(NULL))
     }
   }
 
-  # 4. Hierarchical Clustering
+  # Hierarchical Clustering
   # Cluster based on imputed data to ensure a continuous dendrogram
-  hr <- hclust(dist(z), method = "complete")
-  hc <- hclust(dist(t(z)), method = "complete")
+  hr <- stats::hclust(stats::dist(z), method = "complete")
+  hc <- stats::hclust(stats::dist(t(z)), method = "complete")
 
-  # 5. Aesthetics and Color Mapping
+  # Aesthetics and Color Mapping
   lim <- max(abs(z), na.rm = TRUE)
   col_fun <- circlize::colorRamp2(
     seq(-lim, lim, length.out = 100),
@@ -132,7 +148,7 @@ plot_heatmap_oxy <- function(obj,
     if (is.null(names(colors))) names(colors) <- grps
   }
 
-  # 6. Heatmap Components
+  # Heatmap Components
   # Create top annotation for experimental groups
   anno <- ComplexHeatmap::HeatmapAnnotation(
     Group = obj$meta$group,
@@ -150,6 +166,7 @@ plot_heatmap_oxy <- function(obj,
     top_annotation = anno,
     cluster_rows = hr,
     cluster_columns = hc,
+    show_column_names = show_sample_names,
     row_names_gp = grid::gpar(fontsize = y_axis_size),
     column_names_gp = grid::gpar(fontsize = x_axis_size),
     heatmap_legend_param = list(title_gp = style_t, labels_gp = style_l),
@@ -166,10 +183,10 @@ plot_heatmap_oxy <- function(obj,
     }
   )
 
-  # 7. Final Rendering
+  # Final Rendering
   # Draw heatmap with or without the 'Missing Value' legend item
   if (!hide_na && any(is.na(z_vis))) {
-    ComplexHeatmap::draw(
+    res <- ComplexHeatmap::draw(
       ht,
       annotation_legend_list = list(
         ComplexHeatmap::Legend(
@@ -182,6 +199,8 @@ plot_heatmap_oxy <- function(obj,
       )
     )
   } else {
-    ComplexHeatmap::draw(ht)
+    res <- ComplexHeatmap::draw(ht)
   }
+
+  return(invisible(res))
 }

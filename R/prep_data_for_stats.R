@@ -6,16 +6,16 @@
 #' non-detection (MNAR) to ensure statistical stability.
 #'
 #' @details
-#' \strong{1. Filtering Phase:}
+#' \strong{Filtering Phase:}
 #' \itemize{
 #'   \item \strong{Threshold:} Retains oxylipins with valid measurements in at
 #'   least \eqn{(1 - na\_threshold)} proportion of samples in at least one group.
-#'   \item \strong{Exclusivity:} If \code{remove_exclusive = TRUE}, oxylipins
+#'   \item \strong{Exclusivity:} If \code{require_all_groups = TRUE}, oxylipins
 #'   missing 100% of values in any group are removed to avoid artificial
 #'   variance stabilization issues in linear models.
 #' }
 #'
-#' \strong{2. Imputation Phase:}
+#' \strong{Imputation Phase:}
 #' \itemize{
 #'   \item \strong{MinProb (MNAR):} For Missing Not At Random values. Imputes
 #'   group-wise missingness using the group mean. If an entire group is missing,
@@ -26,36 +26,42 @@
 #'   estimate stochastic missingness.
 #' }
 #'
+#' \strong{Post-Imputation Safety:}
+#' \itemize{
+#'   \item \strong{Zero Variance Filter:} Oxylipins that result in zero variance
+#'   across all samples after imputation are automatically removed. This prevents
+#'   mathematical singularities and fatal errors in downstream multivariate
+#'   analyses (like PCA) and linear modeling.
+#' }
+#'
 #' @param obj A \code{staRoxy} object.
 #' @param na_threshold Numeric. Maximum proportion of missing values allowed
 #' (0 to 1). Default is \code{0.5} (requires 50% valid values).
 #' @param method Character. Imputation strategy: \code{"minprob"} (MNAR-focused)
 #' or \code{"rf"} (Random Forest for MAR-focused).
-#' @param remove_exclusive Logical. Whether to filter out lipids detected in
-#' only one group. Default is \code{TRUE}.
+#' @param require_all_groups Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed. Default is \code{TRUE}.
 #' @param seed Numeric. Seed for reproducibility of stochastic imputation.
 #'
 #' @return A numeric matrix of filtered and imputed log2-transformed data.
 #'
-#' @importFrom stats sd rnorm ave
+#' @importFrom stats sd rnorm ave var
 #' @importFrom cli cli_alert_warning cli_alert_info cli_alert_success
 #'
 #' @keywords internal
 prep_data_for_stats <- function(obj,
                                 na_threshold = 0.5,
                                 method = "minprob",
-                                remove_exclusive = TRUE,
+                                require_all_groups = TRUE,
                                 seed = 5742) {
 
-  # 1. Initialization
+  # Initialization
   set.seed(seed)
   m <- as.matrix(obj$data)
   grps <- obj$meta$group
   n_start <- nrow(m)
 
-  # 2. Filtering Phase
-
-  # STEP 2.1: Threshold Filter (Minimum Survival)
+  # Filtering Phase
+  # Threshold Filter (Minimum Survival)
   keep_thr <- apply(m, 1, function(x) {
     any(tapply(x, grps, function(g) sum(!is.na(g)) / length(g)) >= (1 - na_threshold))
   })
@@ -66,8 +72,8 @@ prep_data_for_stats <- function(obj,
   }
   m <- m[keep_thr, , drop = FALSE]
 
-  # STEP 2.2: Exclusivity Filter
-  if (remove_exclusive) {
+  # Exclusivity Filter
+  if (require_all_groups) {
     keep_exc <- apply(m, 1, function(x) {
       group_counts <- tapply(x, grps, function(g) sum(!is.na(g)))
       return(all(group_counts > 0))
@@ -89,8 +95,7 @@ prep_data_for_stats <- function(obj,
   n_final <- nrow(m)
   cli::cli_alert_success("Filtering complete: {n_final}/{n_start} oxylipins retained.")
 
-  # 3. Imputation Phase
-
+  # Imputation Phase
   if (method == "minprob") {
     cli::cli_alert_info("Imputing via 'minprob': assuming missingness is due to low concentration (MNAR).")
 
@@ -126,9 +131,21 @@ prep_data_for_stats <- function(obj,
     stop("Invalid imputation method. Use 'minprob' or 'rf'.")
   }
 
-  # 4. Finalization
+  # Finalization & Safety Checks
   colnames(m_imp) <- colnames(m)
   rownames(m_imp) <- rownames(m)
+
+  row_vars <- apply(m_imp, 1, stats::var, na.rm = TRUE)
+  zero_var_idx <- which(is.na(row_vars) | row_vars == 0)
+
+  if (length(zero_var_idx) > 0) {
+    cli::cli_alert_warning("Removed {length(zero_var_idx)} oxylipin(s) due to zero variance after imputation to prevent downstream statistical errors.")
+    m_imp <- m_imp[-zero_var_idx, , drop = FALSE]
+  }
+
+  if (nrow(m_imp) < 2) {
+    stop("Not enough oxylipins left with variance for robust multivariate analysis. Check data sparsity.")
+  }
 
   return(m_imp)
 }

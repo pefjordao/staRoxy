@@ -6,8 +6,9 @@
 #' groups.
 #'
 #' @details
-#' The function utilizes the \code{limma} framework, ideal for datasets with
-#' small sample sizes. It automatically generates all possible pairwise
+#' The function utilizes the \code{limma} framework (doi.org/10.1093/nar/gkv007),
+#' ideal for datasets with small sample sizes.
+#' It automatically generates all possible pairwise
 #' comparisons (contrasts). Missing values are handled via a multi-step
 #' pipeline (MNAR vs. MAR) integrated into the internal data preparation.
 #'
@@ -17,10 +18,20 @@
 #' @param na_method Character. Imputation method: \code{"minprob"} (default)
 #' or others supported by \code{prep_data_for_stats}.
 #' @param na_threshold Numeric. Missingness threshold (0-1). Default is \code{0.5}.
-#' @param remove_exclusive Logical. If \code{TRUE}, removes group-exclusive lipids.
-#' @param save_results Logical. If \code{TRUE}, exports CSV files for each contrast.
+#' @param require_all_groups Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.
+#' @param save_results Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.
 #'
 #' @return A named list of data frames containing Log2FC, P-values, and FDR.
+#'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#' # Run differential analysis
+#' stats <- limma_oxy(staRoxy_object, save_results = FALSE)
 #'
 #' @importFrom limma lmFit makeContrasts contrasts.fit eBayes topTable
 #' @importFrom stats setNames model.matrix as.formula
@@ -32,19 +43,19 @@ limma_oxy <- function(obj,
                       covar = NULL,
                       na_method = "minprob",
                       na_threshold = 0.5,
-                      remove_exclusive = TRUE,
+                      require_all_groups = TRUE,
                       save_results = TRUE) {
 
-  # 1. Data Preparation
+  # Data Preparation
   # Prepare data using the standardized imputation and filtering pipeline
   m_prep <- prep_data_for_stats(
     obj,
     na_threshold = na_threshold,
     method = na_method,
-    remove_exclusive = remove_exclusive
+    require_all_groups = require_all_groups
   )
 
-  # 2. Syntactic Protection for Group Names
+  # Syntactic Protection for Group Names
   # Ensure group levels are safe for model formulas (e.g., removing spaces)
   orig_levels <- levels(as.factor(obj$meta$group))
   safe_levels <- make.names(orig_levels)
@@ -53,7 +64,7 @@ limma_oxy <- function(obj,
   meta_temp <- obj$meta
   meta_temp$group <- factor(make.names(meta_temp$group), levels = safe_levels)
 
-  # 3. Model Configuration
+  # Model Configuration
   # Build formula: including covariates if provided
   f_string <- if (is.null(covar)) "~ 0 + group" else paste0("~ 0 + group + ", covar)
   des <- stats::model.matrix(as.formula(f_string), data = meta_temp)
@@ -61,7 +72,7 @@ limma_oxy <- function(obj,
   grps <- levels(meta_temp$group)
   colnames(des)[1:length(grps)] <- grps
 
-  # 4. Limma Differential Analysis
+  # Limma Differential Analysis
   # Linear modeling and Empirical Bayes moderation
   suppressWarnings({
     fit <- limma::lmFit(m_prep, des)
@@ -73,7 +84,7 @@ limma_oxy <- function(obj,
     fit_e <- limma::eBayes(limma::contrasts.fit(fit, cont))
   })
 
-  # 5. Result Processing and Label Translation
+  # Result Processing and Label Translation
   # Map internal safe names back to original user-friendly group names
   res <- lapply(1:ncol(fit_e$contrasts), function(i) {
     df <- limma::topTable(fit_e, coef = i, number = Inf)
@@ -90,7 +101,7 @@ limma_oxy <- function(obj,
 
   names(res) <- sapply(res, function(x) attr(x, "comp"))
 
-  # 6. Results Export (CSV)
+  # Results Export (CSV)
   if (save_results) {
     ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
     for (i in seq_along(res)) {

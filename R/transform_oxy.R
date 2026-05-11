@@ -23,12 +23,17 @@
 #' @return Returns the updated \code{staRoxy} object with log2-transformed
 #' abundances and the filtered feature set.
 #'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' }
+#'
+#' # Apply log2 transformation and remove non-informative features
+#' staRoxy_object_transformed <- transform_oxy(staRoxy_object)
+#'
 #' @importFrom stats var
 #' @importFrom cli cli_alert_success cli_alert_warning cli_alert_info
-#'
-#' @examples
-#' # Apply log2 transformation to the filtered dataset
-#' staRoxy_object <- transform_oxy(staRoxy_object)
 #'
 #' @export
 transform_oxy <- function(obj) {
@@ -39,7 +44,7 @@ transform_oxy <- function(obj) {
 
   # Variance Check
   # Calculate variance per row (oxylipin) to identify non-informative profiles
-  vars <- apply(log_d, 1, var, na.rm = TRUE)
+  vars <- apply(log_d, 1, stats::var, na.rm = TRUE)
 
   # Keep only oxylipins with valid variance (not NA and greater than zero)
   keep <- !is.na(vars) & vars > 0
@@ -49,8 +54,14 @@ transform_oxy <- function(obj) {
   removed_count <- length(removed_names)
 
   # Object Update
-  # Update the data matrix and report the status
+  # Update the data matrix and the internal count
   obj$data <- log_d[keep, , drop = FALSE]
+
+  # Ensure the object's metadata reflects the new feature count
+  if (!is.null(obj$info)) {
+    obj$info$n_oxylipins <- nrow(obj$data)
+  }
+
   cli::cli_alert_success("Log2 transformation complete.")
 
   # Feature Removal Reporting

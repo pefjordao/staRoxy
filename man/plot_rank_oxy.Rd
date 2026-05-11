@@ -20,7 +20,7 @@ plot_rank_oxy(
 )
 }
 \arguments{
-\item{stats}{List of dataframes from \code{limma_oxy} or a single dataframe.}
+\item{stats}{The list object returned by \code{limma_oxy}.}
 
 \item{contrast}{Numeric (index) or Character (name) of the contrast to plot.}
 
@@ -32,9 +32,7 @@ plot_rank_oxy(
 
 \item{direction}{Integer. Direction of the color scale (1 or -1).}
 
-\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size}{Font sizes.}
-
-\item{sig_size}{Numeric. Size of the significance asterisks.}
+\item{title_size, x_axis_size, y_axis_size, legend_title_size, legend_size, sig_size}{Numeric. Font sizes for plot elements and significance asterisks.}
 }
 \value{
 A ggplot2 object.
@@ -46,4 +44,19 @@ bar plot. Features are ranked by either Fold-Change or Significance.
 \details{
 Standard Error of the Mean (SEM) is estimated as \code{abs(logFC / t)}.
 Significance levels are indicated by asterisks based on adjusted P-values.
+}
+\examples{
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+\dontrun{
+# Plot the top 10 features for the first contrast, ranked by absolute LogFC
+stats <- limma_oxy(staRoxy_object, save_results = FALSE)
+
+plot_rank_oxy(stats, contrast = 1, top_n = 10, rank_by = "logFC")
+}
+
 }

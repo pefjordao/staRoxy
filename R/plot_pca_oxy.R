@@ -21,33 +21,43 @@
 #' @param na_method Character. Imputation method: \code{"minprob"} (for MNAR)
 #' or \code{"rf"} (Random Forest for MAR). Default is \code{"minprob"}.
 #' @param na_threshold Numeric. Proportion threshold (0-1) for retaining features.
-#' @param remove_exclusive Logical. If \code{TRUE} (default), excludes lipids
-#' detected in only one group to prevent artificial clustering.
+#' @param require_all_groups Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.
 #' @param colors A named character vector for group colors. If \code{NULL},
 #' a default palette is used.
-#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size Numeric.
-#' Font sizes for various plot elements.
+#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size Numeric. Font sizes for plot elements.
 #'
 #' @return A \code{ggplot2} object.
+#'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#'\dontrun{
+#' # Default PCA plot with automatic colors and minimum probability imputation
+#' plot_pca_oxy(staRoxy_object)
+#'
+#' # PCA plot using Random Forest imputation and custom aesthetic sizes
+#' plot_pca_oxy(
+#'   obj = staRoxy_object,
+#'   na_method = "rf",
+#'   title_size = 16,
+#'   legend_size = 10
+#' )
+#'}
 #'
 #' @importFrom stats sd prcomp
 #' @importFrom ggplot2 ggplot aes geom_vline geom_hline stat_ellipse geom_point scale_color_manual scale_fill_manual labs theme element_text
 #' @importFrom cowplot theme_half_open background_grid
 #' @importFrom scales hue_pal
 #'
-#' @examples
-#' # PCA with default colors
-#' plot_pca_oxy(data_oxy_pellet)
-#'
-#' # PCA with custom group colors
-#' my_colors <- c("Trypsin" = "#F65F72", "Scraper" = "#492376")
-#' plot_pca_oxy(data_oxy_pellet, colors = my_colors, title_size = 16)
-#'
 #' @export
 plot_pca_oxy <- function(obj,
                          na_method = "minprob",
                          na_threshold = 0.5,
-                         remove_exclusive = TRUE,
+                         require_all_groups = TRUE,
                          colors = NULL,
                          title_size = 14,
                          x_axis_size = 12,
@@ -55,26 +65,26 @@ plot_pca_oxy <- function(obj,
                          legend_title_size = 12,
                          legend_size = 12) {
 
-  # 1. Data Imputation and Pre-processing
+  # Data Imputation and Pre-processing
   # Prepare the data matrix handling missing values and exclusive features
   m_imp <- prep_data_for_stats(
     obj,
     na_threshold = na_threshold,
     method = na_method,
-    remove_exclusive = remove_exclusive
+    require_all_groups = require_all_groups
   )
 
   # Transpose for PCA (samples as rows, oxylipins as columns)
   pca_d <- t(m_imp)
 
-  # 2. Feature Selection by Variation
+  # Feature Selection by Variation
   # Remove features with near-zero variance to avoid errors in prcomp
-  sds <- apply(pca_d, 2, sd, na.rm = TRUE)
+  sds <- apply(pca_d, 2, stats::sd, na.rm = TRUE)
   pca_d <- pca_d[, sds > 1e-4, drop = FALSE]
 
-  # 3. Principal Component Computation
+  # Principal Component Computation
   # Calculate PCA with centering and scaling
-  pca_res <- prcomp(pca_d, center = TRUE, scale. = TRUE)
+  pca_res <- stats::prcomp(pca_d, center = TRUE, scale. = TRUE)
 
   # Calculate explained variance per component for axis labeling
   var_p <- round(100 * pca_res$sdev^2 / sum(pca_res$sdev^2), 1)
@@ -87,7 +97,7 @@ plot_pca_oxy <- function(obj,
     colors <- scales::hue_pal()(length(unique(df$group)))
   }
 
-  # 4. Visualization (ggplot2)
+  # Visualization (ggplot2)
   # Generate the PCA score plot with confidence ellipses
   ggplot2::ggplot(df, ggplot2::aes(PC1, PC2, color = group, fill = group)) +
     ggplot2::geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.3) +

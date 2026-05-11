@@ -8,23 +8,35 @@
 #' Standard Error of the Mean (SEM) is estimated as \code{abs(logFC / t)}.
 #' Significance levels are indicated by asterisks based on adjusted P-values.
 #'
-#' @param stats List of dataframes from \code{limma_oxy} or a single dataframe.
+#' @param stats The list object returned by \code{limma_oxy}.
 #' @param contrast Numeric (index) or Character (name) of the contrast to plot.
 #' @param top_n Integer. Number of oxylipins to display.
 #' @param rank_by Character. Rank by \code{"logFC"} (absolute) or \code{"p"} (significance).
 #' @param palette Character. Viridis palette option (e.g., "magma", "viridis").
 #' @param direction Integer. Direction of the color scale (1 or -1).
-#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size Font sizes.
-#' @param sig_size Numeric. Size of the significance asterisks.
+#' @param title_size,x_axis_size,y_axis_size,legend_title_size,legend_size,sig_size Numeric. Font sizes for plot elements and significance asterisks.
 #'
 #' @return A ggplot2 object.
+#'
+#' @examples
+#' \dontshow{
+#' staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+#' staRoxy_object <- filter_oxy(staRoxy_object)
+#' staRoxy_object <- transform_oxy(staRoxy_object)
+#' }
+#'
+#'\dontrun{
+#' # Plot the top 10 features for the first contrast, ranked by absolute LogFC
+#' stats <- limma_oxy(staRoxy_object, save_results = FALSE)
+#'
+#' plot_rank_oxy(stats, contrast = 1, top_n = 10, rank_by = "logFC")
+#'}
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom dplyr mutate slice_max case_when
 #' @importFrom forcats fct_reorder
-#' @importFrom ggplot2 ggplot aes geom_errorbar geom_bar geom_text scale_fill_viridis_c labs theme element_text
+#' @importFrom ggplot2 ggplot aes geom_errorbar geom_bar geom_text scale_fill_viridis_c labs theme element_text expansion coord_cartesian scale_x_continuous
 #' @importFrom cowplot theme_half_open background_grid
-#' @importFrom cli cli_alert_danger
 #'
 #' @export
 plot_rank_oxy <- function(stats,
@@ -40,30 +52,18 @@ plot_rank_oxy <- function(stats,
                           legend_size = 12,
                           sig_size = 6) {
 
-  # 1. Contrast Selection and Data Extraction
-  # Handle both list of dataframes (from limma_oxy) or a single dataframe
-  if (is.list(stats) && !is.data.frame(stats)) {
-    if (is.character(contrast)) {
-      if (!(contrast %in% names(stats))) {
-        return(cli::cli_alert_danger("Contrast '{contrast}' not found in the stats list."))
-      }
-      comp_name <- contrast
-      stats_df <- stats[[contrast]]
-    } else if (is.numeric(contrast)) {
-      if (contrast > length(stats)) {
-        return(cli::cli_alert_danger("Index {contrast} exceeds available contrasts."))
-      }
-      comp_name <- names(stats)[contrast]
-      stats_df <- stats[[contrast]]
-    }
+  # Contrast Selection and Data Extraction
+  if (is.character(contrast)) {
+    comp_name <- contrast
   } else {
-    comp_name <- attr(stats, "comp")
-    stats_df <- stats
+    comp_name <- names(stats)[contrast]
   }
 
-  # 2. Title and Scoring Logic
+  stats_df <- stats[[contrast]]
+
+  # Title and Scoring Logic
   full_title <- if (!is.null(comp_name)) {
-    paste("Oxylipin Differential Abundance -", gsub("-", " vs. ", comp_name))
+    paste("Oxylipin Differential Abundance -", comp_name)
   } else {
     "Oxylipin Differential Abundance"
   }
@@ -71,7 +71,7 @@ plot_rank_oxy <- function(stats,
   # Determine ranking criteria (Absolute LogFC or Significance)
   select_score <- if (rank_by == "p") (1 - stats_df$adj.P.Val) else abs(stats_df$logFC)
 
-  # 3. Data Wrangling (dplyr & forcats)
+  # Data Wrangling
   plot_data <- stats_df %>%
     tibble::rownames_to_column("Oxylipin") %>%
     dplyr::mutate(score = select_score) %>%
@@ -93,7 +93,10 @@ plot_rank_oxy <- function(stats,
       err_max = ifelse(logFC > 0, logFC + SEM, logFC)
     )
 
-  # 4. Visualization (ggplot2)
+  max_x <- max(abs(c(plot_data$err_min, plot_data$err_max)), na.rm = TRUE)
+  gap <- max_x * 0.07
+
+  # Visualization
   ggplot2::ggplot(plot_data, ggplot2::aes(x = logFC, y = Oxylipin, fill = adj.P.Val)) +
     # Error bars for precision
     ggplot2::geom_errorbar(
@@ -105,10 +108,15 @@ plot_rank_oxy <- function(stats,
     ggplot2::geom_bar(stat = "identity", color = "black", linewidth = 0.6) +
     # Significance labels positioned dynamically
     ggplot2::geom_text(
-      ggplot2::aes(x = ifelse(logFC > 0, err_max, err_min), label = sig_label),
-      hjust = ifelse(plot_data$logFC > 0, -0.4, 1.4),
-      vjust = 0.7,
-      size = sig_size
+      ggplot2::aes(
+        x = ifelse(logFC > 0, err_max + gap, err_min - gap),
+        label = sig_label
+      ),
+      angle = 90,
+      fontface = "bold",
+      size = sig_size,
+      hjust = 0.5,
+      vjust = 0.5
     ) +
     # Styling and scales
     ggplot2::scale_fill_viridis_c(
@@ -116,7 +124,11 @@ plot_rank_oxy <- function(stats,
       direction = direction,
       name = "Adj. P-value"
     ) +
-    ggplot2::labs(title = full_title, x = "Log2FC ± SEM", y = "") +
+    ggplot2::scale_x_continuous(
+      expand = ggplot2::expansion(mult = c(0.15, 0.15))
+    ) +
+    ggplot2::coord_cartesian(clip = "off") +
+    ggplot2::labs(title = full_title, x = "Log2FC \u00b1 SEM", y = "") +
     cowplot::theme_half_open() +
     cowplot::background_grid(major = "x") +
     ggplot2::theme(

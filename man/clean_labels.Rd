@@ -12,17 +12,20 @@ encoding issues.}
 }
 \value{
 A character vector with corrected lipid names and restored special
-characters (α, β, γ, Δ).
+characters.
 }
 \description{
 Internal helper function to fix encoding artifacts in lipid names. It replaces
 common broken characters (resulting from encoding mismatches) with a dot
 and then maps those patterns back to their correct biochemical symbols
-(e.g., alpha, beta, gamma, delta).
+(e.g., \eqn{\alpha}, \eqn{\beta}, \eqn{\gamma}, \eqn{\Delta}).
+
+If unknown encoding artifacts are detected outside the internal database,
+it alerts the user to manually correct them using proper Unicode.
 }
 \details{
 This function is specifically tuned for oxylipin nomenclature used in
-LC-MS/MS outputs where characters like 'Δ' or 'α' often get corrupted
-into symbols like 'Â', 'Ã', '?', or '¶'.
+LC-MS/MS outputs where special characters often get corrupted
+into symbols like broken encoding artifacts.
 }
 \keyword{internal}

@@ -2,13 +2,13 @@
 % Please edit documentation in R/profile_test.R
 \name{profile_test}
 \alias{profile_test}
-\title{Multivariate Oxylipin Profile Analysis (PERMANOVA/PCoA)}
+\title{Multivariate Oxylipin Profile Analysis}
 \usage{
 profile_test(
   obj,
   na_method = "minprob",
   na_threshold = 0.5,
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   colors = NULL,
   permutations = 10000,
   plot = FALSE,
@@ -28,8 +28,7 @@ Default is \code{"minprob"}.}
 \item{na_threshold}{Numeric. Proportion of missing values allowed.
 Default is \code{0.5}.}
 
-\item{remove_exclusive}{Logical. If \code{TRUE}, removes lipids unique
-to a single group to ensure robust multivariate modeling.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 
 \item{colors}{A named character vector for group colors.}
 
@@ -53,7 +52,7 @@ and PCoA (Principal Coordinates Analysis) for visualization of beta-diversity.
 \details{
 \strong{Statistical Framework:}
 \itemize{
-\item \strong{Standardization:} Data is Z-score scaled (mean=0, var=1) to
+\item \strong{Standardization:} Data is Z-score scaled (mean = 0, var = 1) to
 ensure that high-abundance oxylipins do not overshadow biologically
 relevant lower-abundance mediators.
 \item \strong{PERMANOVA:} Executes a non-parametric Permutational
@@ -68,4 +67,24 @@ PERMANOVA with Bonferroni correction.
 Generates a PCoA plot (equivalent to PCA when using Euclidean distance)
 showcasing the coordinates that explain the most variation in the
 multidimensional lipid space.
+}
+\examples{
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+\dontrun{
+# Run PERMANOVA without plotting (default)
+perm_res <- profile_test(staRoxy_object)
+
+# Run PERMANOVA, display the PCoA plot, and use fewer permutations for speed
+profile_test(
+  obj = staRoxy_object,
+  plot = TRUE,
+  permutations = 1000
+)
+}
+
 }

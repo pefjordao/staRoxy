@@ -1,6 +1,6 @@
 Package: staRoxy
 Title: Oxylipidomics Abundance Data Analysis Pipeline
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(
     person("Pedro Henrique F.", "Jordão", , "pedro.hf.jordao@usp.br", role = c("aut", "cre")),
     person("Eduardo M.", "Reis", role = "aut")
@@ -15,7 +15,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports: 
     circlize,
     cli,
@@ -24,26 +23,30 @@ Imports:
     data.table,
     dplyr,
     forcats,
-    ggiraphExtra,
     ggplot2,
     ggrepel,
     ggsignif,
     grid,
     limma,
-    mgcv,
     missForest,
-    RColorBrewer,
+    pairwiseAdonis,
     readxl,
     scales,
     stringr,
     tibble,
+    tidyselect,
     tidyr,
     vegan,
-    viridis
+    viridis,
+    rlang,
+    stringi
+Remotes:
+    pmartinezarbizu/pairwiseAdonis/pairwiseAdonis
 Depends: 
     R (>= 3.5)
-Suggests: 
+Suggests:
     knitr,
     prettydoc,
+    ragg,
     rmarkdown
-VignetteBuilder: knitr
+Config/roxygen2/version: 8.0.0

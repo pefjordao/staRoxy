@@ -38,13 +38,23 @@ Sorting and filtering options allow for quick identification of top-abundance
 features or those with high analytical variability.
 }
 \examples{
-# Basic descriptive statistics sorted by mean abundance
-descriptives_oxy(data_oxy_pellet, sort_by = "mean")
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# Statistics for a specific group only
-descriptives_oxy(data_oxy_pellet, group = "Scraper")
+# Get full descriptive statistics for all lipids and groups
+desc_all <- descriptives_oxy(staRoxy_object)
 
-# Top 10 features with highest CV\%
-descriptives_oxy(data_oxy_pellet, n_top = 10, sort_by = "cv")
+# Find the top 5 most abundant lipids, sorted by Coefficient of Variation (CV\%)
+desc_top <- descriptives_oxy(staRoxy_object, n_top = 5, sort_by = "cv")
+
+# Analyze specific groups and sort by the number of missing values (NAs)
+desc_group <- descriptives_oxy(
+  staRoxy_object,
+  group = c("LPS", "Control"),
+  sort_by = "na"
+)
 
 }

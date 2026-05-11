@@ -8,13 +8,14 @@ plot_heatmap_oxy(
   obj,
   na_method = "minprob",
   na_threshold = 0.5,
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   colors = NULL,
   show_values = FALSE,
   hide_na = FALSE,
   na_color = "grey90",
   z_cap = 4,
   palette = "magma",
+  show_sample_names = TRUE,
   x_axis_size = 12,
   y_axis_size = 12,
   legend_title_size = 12,
@@ -28,7 +29,7 @@ plot_heatmap_oxy(
 
 \item{na_threshold}{Missingness threshold for feature retention (default \code{0.5}).}
 
-\item{remove_exclusive}{Logical. If \code{TRUE}, excludes lipids unique to one group.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 
 \item{colors}{A named character vector for group annotations.}
 
@@ -42,6 +43,8 @@ before plotting.}
 \item{z_cap}{Numeric. Maximum absolute Z-score to display (default \code{4}).}
 
 \item{palette}{Character. Viridis palette option (e.g., "magma", "viridis").}
+
+\item{show_sample_names}{Logical. If \code{FALSE}, hides the sample names on the x-axis for a cleaner look (default \code{TRUE}).}
 
 \item{x_axis_size, y_axis_size, legend_title_size, legend_size}{Numeric. Font sizes
 for plot labels and legends.}
@@ -70,10 +73,23 @@ original \code{NA} positions are restored and displayed in a distinct color
 method for both rows (oxylipins) and columns (samples).
 }
 \examples{
-# Generate heatmap with default settings
-plot_heatmap_oxy(data_oxy_pellet)
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
 
-# Heatmap hiding NAs and capping Z-score at 2
-plot_heatmap_oxy(data_oxy_pellet, hide_na = TRUE, z_cap = 2)
+\dontrun{
+# Default heatmap
+plot_heatmap_oxy(staRoxy_object)
+
+# Clean heatmap: hide NA values, hide sample names, and show Z-scores
+plot_heatmap_oxy(
+  staRoxy_object,
+  hide_na = TRUE,
+  show_sample_names = FALSE,
+  show_values = TRUE
+)
+}
 
 }

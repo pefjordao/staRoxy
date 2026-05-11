@@ -9,7 +9,7 @@ limma_oxy(
   covar = NULL,
   na_method = "minprob",
   na_threshold = 0.5,
-  remove_exclusive = TRUE,
+  require_all_groups = TRUE,
   save_results = TRUE
 )
 }
@@ -24,9 +24,9 @@ or others supported by \code{prep_data_for_stats}.}
 
 \item{na_threshold}{Numeric. Missingness threshold (0-1). Default is \code{0.5}.}
 
-\item{remove_exclusive}{Logical. If \code{TRUE}, removes group-exclusive lipids.}
+\item{require_all_groups}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 
-\item{save_results}{Logical. If \code{TRUE}, exports CSV files for each contrast.}
+\item{save_results}{Logical. If \code{TRUE}, retains only oxylipins that have at least one valid (non-NA) observation in every experimental group. Oxylipins completely missing in any group are removed.}
 }
 \value{
 A named list of data frames containing Log2FC, P-values, and FDR.
@@ -37,8 +37,20 @@ moderation to identify differentially abundant features across experimental
 groups.
 }
 \details{
-The function utilizes the \code{limma} framework, ideal for datasets with
-small sample sizes. It automatically generates all possible pairwise
+The function utilizes the \code{limma} framework (doi.org/10.1093/nar/gkv007),
+ideal for datasets with small sample sizes.
+It automatically generates all possible pairwise
 comparisons (contrasts). Missing values are handled via a multi-step
 pipeline (MNAR vs. MAR) integrated into the internal data preparation.
+}
+\examples{
+\dontshow{
+staRoxy_object <- read_oxy(data_oxy_lps_pellet, metadata_oxy_lps_pellet)
+staRoxy_object <- filter_oxy(staRoxy_object)
+staRoxy_object <- transform_oxy(staRoxy_object)
+}
+
+# Run differential analysis
+stats <- limma_oxy(staRoxy_object, save_results = FALSE)
+
 }
